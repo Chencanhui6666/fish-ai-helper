@@ -1,13 +1,13 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..agent.agent import chat_events
 
-router = APIRouter()
+chatRouter = APIRouter()
 
-@router.get("/")
+@chatRouter.get("/")
 async def read_root():
     return {"Hello": "World"}
 
-@router.websocket("/ws/chat")
+@chatRouter.websocket("/ws/chat")
 async def chat(websocket: WebSocket):
     await websocket.accept()
     try:

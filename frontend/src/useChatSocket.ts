@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { MessageImage } from './api/images'
 
 type Connection = 'connecting' | 'open' | 'closed'
 export type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
   text: string
+  images?: MessageImage[]
   createdAt: string
   status: 'streaming' | 'complete' | 'interrupted'
 }
@@ -109,9 +111,9 @@ export function useChatSocket() {
     }
   }, [connect])
 
-  function send(text: string) {
+  function send(text: string, images: MessageImage[] = []) {
     const socket = socketRef.current
-    if (!text.trim() || pendingRef.current) return false
+    if ((!text.trim() && images.length === 0) || pendingRef.current) return false
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       setError('聊天尚未连接，请连接成功后发送。')
       return false
@@ -120,7 +122,7 @@ export function useChatSocket() {
     // Set the ref synchronously to prevent duplicate submits in the same render.
     pendingRef.current = id
     try {
-      socket.send(JSON.stringify({ message: text.trim() }))
+      socket.send(JSON.stringify({ message: text.trim(), ...(images.length > 0 ? { image_ids: images.map(image => image.image_id) } : {}) }))
     } catch {
       pendingRef.current = null
       setError('消息发送失败，草稿已保留，请重新连接。')
@@ -130,7 +132,7 @@ export function useChatSocket() {
     setIsStreaming(true)
     const createdAt = timestamp()
     setMessages(current => [...current,
-      { id: crypto.randomUUID(), role: 'user', text: text.trim(), createdAt, status: 'complete' },
+      { id: crypto.randomUUID(), role: 'user', text: text.trim(), images, createdAt, status: 'complete' },
       { id, role: 'assistant', text: '', createdAt, status: 'streaming' },
     ])
     return true
