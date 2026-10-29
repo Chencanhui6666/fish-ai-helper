@@ -3,6 +3,7 @@ from uuid import uuid4
 from pathlib import Path
 from ..db.table.Image import Image
 from ..db.postgreSql import ImageTable
+import base64
 
 MAX_SIZE = 1024 * 1024 * 10
 
@@ -42,4 +43,32 @@ async def insert_image(file: UploadFile):
       file_path.unlink(missing_ok=True)
       raise
   finally:
-    await file.close() 
+    await file.close()
+
+async def read_image(img_id: str):
+  try:
+    img_table = ImageTable()
+    img = img_table.get_by_id(img_id)
+
+    if not img:
+      raise Exception("该图片不存在")
+    
+    file_path = UPLOAD_DIR / img.storage_key
+    content = file_path.read_bytes()
+
+    if not content:
+      raise Exception("该图片不存在")
+    
+    encoded = base64.b64encode(content)
+    # 将bytes转为字符串，方便放入json
+    base64_text = encoded.decode("ascii")
+
+    return {
+      "type": "image",
+      "base64": base64_text,
+      "mime_type": img.content_type
+    }
+  except Exception:
+    print("该图片不存在")
+
+
